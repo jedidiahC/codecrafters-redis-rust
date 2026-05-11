@@ -9,7 +9,7 @@ fn handle_connection(mut stream: TcpStream) -> Result<()> {
 
     for line in reader.lines() {
         let line = line?;
-        if line.starts_with("PING") {
+        if line == "PING" {
             stream.write_all(b"+PONG\r\n")?;
         }
     }
