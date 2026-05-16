@@ -1,4 +1,8 @@
 #![allow(unused_imports)]
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+
+use bytes::Bytes;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::tcp::ReadHalf;
 use tokio::net::{TcpListener, TcpStream};
@@ -16,6 +20,8 @@ impl Resp for str {
         format!("${}\r\n{}\r\n", self.len(), self)
     }
 }
+
+type Store = Arc<Mutex<HashMap<String, Bytes>>>;
 
 async fn read_command_arguments(reader: ReadHalf<'_>) -> Option<(String, Vec<String>)> {
     let mut buf_reader = BufReader::new(reader);
@@ -65,7 +71,7 @@ async fn read_command_arguments(reader: ReadHalf<'_>) -> Option<(String, Vec<Str
 }
 
 // Process command, returning output string.
-fn handle_command(command: &String, args: &Vec<String>) -> Option<String> {
+fn handle_command(command: &String, args: &Vec<String>, store: Store) -> Option<String> {
     if command == "PING" {
         return Some("PONG".to_resp().to_string());
     }
@@ -74,15 +80,37 @@ fn handle_command(command: &String, args: &Vec<String>) -> Option<String> {
         return Some(args.join(" ").to_bulk_str());
     }
 
+    if command == "SET" {
+        let mut store = store.lock().unwrap();
+        let key = args[0].clone();
+        let value = Bytes::from(args[1..].join(" "));
+
+        store.insert(key, value);
+        return Some("OK".to_resp().to_string());
+    }
+
+    if command == "GET" {
+        let store = store.lock().unwrap();
+        let key = args[0].clone();
+
+        if let Some(value) = store.get(&key) {
+            return Some(String::from_utf8(value.to_vec()).ok()?.to_bulk_str());
+        } else {
+            let null_bulk_string = String::from("$-1\r\n");
+            return Some(null_bulk_string);
+        }
+    }
+
     None
 }
 
-async fn handle_connection(mut stream: TcpStream) -> anyhow::Result<()> {
+async fn handle_connection(mut stream: TcpStream, store: Store) -> anyhow::Result<()> {
     loop {
         let (reader, mut writer) = stream.split();
 
         if let Some((command, arguments)) = read_command_arguments(reader).await {
-            let output_result = handle_command(&command, &arguments);
+            let store = store.clone();
+            let output_result = handle_command(&command, &arguments, store);
 
             if let Some(output) = output_result {
                 writer.write_all(output.as_bytes()).await?;
@@ -101,10 +129,13 @@ async fn main() -> anyhow::Result<()> {
 
     let listener = TcpListener::bind("127.0.0.1:6379").await.unwrap();
 
+    let store: Store = Arc::new(Mutex::new(HashMap::new()));
+
     loop {
         let (stream, _) = listener.accept().await.unwrap();
+        let store = store.clone();
 
         println!("accepted new connection");
-        tokio::spawn(async move { handle_connection(stream).await });
+        tokio::spawn(async move { handle_connection(stream, store).await });
     }
 }
