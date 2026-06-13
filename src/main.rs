@@ -144,7 +144,7 @@ fn handle_command(command: &String, args: &Vec<String>, store: Store) -> Option<
     }
 
     if command == "GET" {
-        let store = store.lock().unwrap();
+        let mut store = store.lock().unwrap();
         let key = args[0].clone();
 
         if let Some(store_value) = store.get(&key) {
@@ -158,10 +158,12 @@ fn handle_command(command: &String, args: &Vec<String>, store: Store) -> Option<
                     .duration_since(UNIX_EPOCH)
                     .unwrap()
                     .as_millis();
+
                 let exp_time: u128 = exp_time.parse().unwrap();
                 println!("current_time: {}, exp_time: {}", current_time, exp_time);
 
                 if exp_time < current_time {
+                    store.remove(&key);
                     let null_bulk_string = String::from("$-1\r\n");
                     return Some(null_bulk_string);
                 }
