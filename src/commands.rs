@@ -87,13 +87,10 @@ impl Command {
                 Some(Command::Get { key: key.clone() })
             }
             "RPUSH" => {
-                let mut iter = args.iter();
+                let mut iter = args.into_iter();
                 let key = iter.next()?;
-                let element = iter.next()?;
-                Some(Command::Rpush {
-                    key: key.clone(),
-                    elements: [element.clone()].to_vec(),
-                })
+                let elements: Vec<String> = iter.collect();
+                Some(Command::Rpush { key, elements })
             }
             _ => None,
         }
