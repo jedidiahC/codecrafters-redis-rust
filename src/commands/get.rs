@@ -23,5 +23,5 @@ pub fn get(key: &String, store: &RedisStore) -> Resp {
         // TODO: Should return error if value is not string.
     }
 
-    return Resp::Null;
+    Resp::Null
 }

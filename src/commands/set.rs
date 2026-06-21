@@ -12,6 +12,6 @@ pub fn set(key: String, value: String, expiration: Option<Instant>, store: &Redi
     let store_value = StoreElement::String { value, expiration };
 
     store.insert(key, store_value);
-    return Resp::SimpleString("OK".to_string());
+    Resp::SimpleString("OK".to_string())
 }
 

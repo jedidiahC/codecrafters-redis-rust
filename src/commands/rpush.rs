@@ -12,13 +12,13 @@ pub fn rpush(key: String, elements: &mut Vec<String>, store: &RedisStore) -> Res
 
     let store_element = store
         .entry(key)
-        .or_insert(StoreElement::List { value: Vec::new() });
+        .or_insert(StoreElement::List { list: Vec::new() });
 
-    if let StoreElement::List { value } = store_element {
-        value.append(elements);
-        return Resp::Integer(value.len() as i64);
+    if let StoreElement::List { list } = store_element {
+        list.append(elements);
+        return Resp::Integer(list.len() as i64)
     }
     
     // TODO: Should return error.
-    return Resp::Null;
+    Resp::Null
 }

@@ -10,6 +10,6 @@ pub enum StoreElement {
         expiration: Option<Instant>,
     },
     List {
-        value: Vec<String>,
+        list: Vec<String>,
     },
 }

@@ -41,7 +41,6 @@ async fn main() -> anyhow::Result<()> {
     println!("Logs from your program will appear here!");
 
     let listener = TcpListener::bind("127.0.0.1:6379").await.unwrap();
-
     let store: RedisStore = Arc::new(Mutex::new(HashMap::new()));
 
     loop {

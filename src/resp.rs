@@ -21,6 +21,7 @@ pub enum Resp {
     SimpleError(String),
     Integer(i64),
     BulkString(String),
+    Array(Vec<Resp>),
     Null,
 }
 
@@ -32,6 +33,10 @@ impl fmt::Display for Resp {
             Resp::Integer(i) => write!(f, ":{}\r\n", i),
             Resp::BulkString(b) => write!(f, "${}\r\n{b}\r\n", b.len()),
             Resp::Null => write!(f, "$-1\r\n"),
+            Resp::Array(arr) => {
+                let arr_strings: Vec<String> = arr.iter().map(|e| e.to_string()).collect();
+                write!(f, "*{}\r\n{}", arr.len(), arr_strings.join(""))
+            }
         }
     }
 }
@@ -79,5 +84,5 @@ pub async fn read_bulk_string_array(reader: ReadHalf<'_>) -> Option<Vec<String>>
         args.push(line.trim().to_string());
     }
 
-    return Some(args);
+    Some(args)
 }

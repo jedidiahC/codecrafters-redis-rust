@@ -1,10 +1,12 @@
 mod get;
+mod lrange;
 mod rpush;
 mod set;
 
 use super::resp::Resp;
 use super::store::{RedisStore, StoreElement};
 use get::get;
+use lrange::lrange;
 use rpush::rpush;
 use set::set;
 
@@ -32,6 +34,11 @@ pub enum Command {
         key: String,
         elements: Vec<String>,
     },
+    Lrange {
+        key: String,
+        start: usize,
+        end: usize,
+    },
 }
 
 impl Command {
@@ -54,7 +61,7 @@ impl Command {
             // PX milliseconds | EXAT unix-time-seconds |
             // PXAT unix-time-milliseconds | KEEPTTL]
             "SET" => {
-                let mut iter = args.iter();
+                let mut iter = args.into_iter();
                 let key = iter.next()?;
                 let value = iter.next()?;
 
@@ -69,22 +76,22 @@ impl Command {
                             _ => Instant::now() + Duration::from_millis(exp_val),
                         };
                         return Some(Command::Set {
-                            key: key.clone(),
-                            value: value.clone(),
+                            key,
+                            value,
                             expiration: Some(expiration),
                         });
                     }
                 }
                 Some(Command::Set {
-                    key: key.clone(),
-                    value: value.clone(),
+                    key,
+                    value,
                     expiration: None,
                 })
             }
             "GET" => {
-                let mut iter = args.iter();
+                let mut iter = args.into_iter();
                 let key = iter.next()?;
-                Some(Command::Get { key: key.clone() })
+                Some(Command::Get { key })
             }
             "RPUSH" => {
                 let mut iter = args.into_iter();
@@ -92,11 +99,18 @@ impl Command {
                 let elements: Vec<String> = iter.collect();
                 Some(Command::Rpush { key, elements })
             }
+            "LRANGE" => {
+                let mut iter = args.into_iter();
+                let key = iter.next()?;
+                let start: usize = iter.next()?.parse().ok()?;
+                let end: usize = iter.next()?.parse().ok()?;
+                Some(Command::Lrange { key, start, end })
+            }
             _ => None,
         }
     }
 
-    pub fn run(&self, store: RedisStore) -> String {
+    pub fn run(self, store: RedisStore) -> String {
         let resp: Resp = match self {
             Command::Ping => ping(),
             Command::Echo(message) => echo(message.clone()),
@@ -105,8 +119,9 @@ impl Command {
                 value,
                 expiration,
             } => set(key.clone(), value.clone(), expiration.clone(), &store),
-            Command::Get { key } => get(key, &store),
+            Command::Get { key } => get(&key, &store),
             Command::Rpush { key, elements } => rpush(key.clone(), &mut elements.clone(), &store),
+            Command::Lrange { key, start, end } => lrange(&key, start, end, &store),
         };
 
         resp.to_string()
@@ -114,9 +129,9 @@ impl Command {
 }
 
 pub fn ping() -> Resp {
-    return Resp::SimpleString("PONG".to_string());
+    Resp::SimpleString("PONG".to_string())
 }
 
 pub fn echo(message: String) -> Resp {
-    return Resp::BulkString(message);
+    Resp::BulkString(message)
 }
