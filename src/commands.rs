@@ -36,8 +36,8 @@ pub enum Command {
     },
     Lrange {
         key: String,
-        start: usize,
-        end: usize,
+        start: i64,
+        end: i64,
     },
 }
 
@@ -102,8 +102,8 @@ impl Command {
             "LRANGE" => {
                 let mut iter = args.into_iter();
                 let key = iter.next()?;
-                let start: usize = iter.next()?.parse().ok()?;
-                let end: usize = iter.next()?.parse().ok()?;
+                let start: i64 = iter.next()?.parse().ok()?;
+                let end: i64 = iter.next()?.parse().ok()?;
                 Some(Command::Lrange { key, start, end })
             }
             _ => None,
