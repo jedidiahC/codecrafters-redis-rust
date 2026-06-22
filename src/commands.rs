@@ -1,6 +1,7 @@
 mod get;
 mod lrange;
 mod rpush;
+mod lpush;
 mod set;
 
 use super::resp::Resp;
@@ -8,6 +9,7 @@ use super::store::{RedisStore, StoreElement};
 use get::get;
 use lrange::lrange;
 use rpush::rpush;
+use lpush::lpush;
 use set::set;
 
 use std::collections::HashMap;
@@ -31,6 +33,10 @@ pub enum Command {
         key: String,
     },
     Rpush {
+        key: String,
+        elements: Vec<String>,
+    },
+    Lpush {
         key: String,
         elements: Vec<String>,
     },
@@ -99,6 +105,12 @@ impl Command {
                 let elements: Vec<String> = iter.collect();
                 Some(Command::Rpush { key, elements })
             }
+            "LPUSH" => {
+                let mut iter = args.into_iter();
+                let key = iter.next()?;
+                let elements: Vec<String> = iter.collect();
+                Some(Command::Lpush { key, elements })
+            }
             "LRANGE" => {
                 let mut iter = args.into_iter();
                 let key = iter.next()?;
@@ -121,6 +133,7 @@ impl Command {
             } => set(key.clone(), value.clone(), expiration.clone(), &store),
             Command::Get { key } => get(&key, &store),
             Command::Rpush { key, elements } => rpush(key.clone(), &mut elements.clone(), &store),
+            Command::Lpush { key, elements } => lpush(key, elements, &store),
             Command::Lrange { key, start, end } => lrange(&key, start, end, &store),
         };
 
