@@ -1,15 +1,11 @@
 mod get;
-mod lrange;
-mod rpush;
-mod lpush;
+mod list;
 mod set;
 
 use super::resp::Resp;
 use super::store::{RedisStore, StoreElement};
 use get::get;
-use lrange::lrange;
-use rpush::rpush;
-use lpush::lpush;
+use list::{llen, lpush, lrange, rpush};
 use set::set;
 
 use std::collections::HashMap;
@@ -44,6 +40,9 @@ pub enum Command {
         key: String,
         start: i64,
         end: i64,
+    },
+    Llen {
+        key: String,
     },
 }
 
@@ -118,6 +117,11 @@ impl Command {
                 let end: i64 = iter.next()?.parse().ok()?;
                 Some(Command::Lrange { key, start, end })
             }
+            "LLEN" => {
+                let mut iter = args.into_iter();
+                let key = iter.next()?;
+                Some(Command::Llen { key })
+            }
             _ => None,
         }
     }
@@ -135,6 +139,7 @@ impl Command {
             Command::Rpush { key, elements } => rpush(key.clone(), &mut elements.clone(), &store),
             Command::Lpush { key, elements } => lpush(key, elements, &store),
             Command::Lrange { key, start, end } => lrange(&key, start, end, &store),
+            Command::Llen { key } => llen(key, &store),
         };
 
         resp.to_string()
