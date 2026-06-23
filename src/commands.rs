@@ -5,7 +5,7 @@ mod set;
 use super::resp::Resp;
 use super::store::{RedisStore, StoreElement};
 use get::get;
-use list::{llen, lpush, lrange, rpush};
+use list::{llen, lpop, lpush, lrange, rpush};
 use set::set;
 
 use std::collections::HashMap;
@@ -42,6 +42,9 @@ pub enum Command {
         end: i64,
     },
     Llen {
+        key: String,
+    },
+    Lpop {
         key: String,
     },
 }
@@ -122,6 +125,11 @@ impl Command {
                 let key = iter.next()?;
                 Some(Command::Llen { key })
             }
+            "LPOP" => {
+                let mut iter = args.into_iter();
+                let key = iter.next()?;
+                Some(Command::Lpop { key })
+            }
             _ => None,
         }
     }
@@ -140,6 +148,7 @@ impl Command {
             Command::Lpush { key, elements } => lpush(key, elements, &store),
             Command::Lrange { key, start, end } => lrange(&key, start, end, &store),
             Command::Llen { key } => llen(key, &store),
+            Command::Lpop { key } => lpop(key, &store),
         };
 
         resp.to_string()

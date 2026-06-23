@@ -90,3 +90,20 @@ pub fn llen(key: String, store: &RedisStore) -> Resp {
 
     Resp::Integer(0)
 }
+
+pub fn lpop(key: String, store: &RedisStore) -> Resp {
+    let mut store = store.lock().unwrap();
+
+    let element = store.get_mut(&key);
+
+    if let Some(element) = element {
+        if let StoreElement::List { list } = element
+            && list.len() > 0
+        {
+            let top = list.remove(0);
+            return Resp::BulkString(top);
+        }
+    }
+
+    Resp::Null
+}
